@@ -30,12 +30,18 @@ The project is built to showcase programming skills in **Python**, **data handli
 # Example Output
 For the movie "Toy Story (1995)", the system recommends:
 
-Rank	Recommended Movie	Genres
-1	Adventures of Rocky and Bullwinkle, The (2000)	Adventure, Animation, Children
-2	Antz (1998)	Adventure, Animation, Children, Comedy
-3	Toy Story 2 (1999)	Adventure, Animation, Children, Comedy
-4	Monsters, Inc. (2001)	Adventure, Animation, Children, Fantasy
-5	Emperor's New Groove, The (2000)	Adventure, Animation, Children, Comedy
+## Example Output
+
+For the movie **"Toy Story (1995)"**, the system recommends:
+
+| **Rank** | **Recommended Movie**                   | **Genres**                               |
+|----------|-----------------------------------------|------------------------------------------|
+| 1        | Adventures of Rocky and Bullwinkle, The (2000) | Adventure, Animation, Children          |
+| 2        | Antz (1998)                             | Adventure, Animation, Children, Comedy  |
+| 3        | Toy Story 2 (1999)                      | Adventure, Animation, Children, Comedy  |
+| 4        | Monsters, Inc. (2001)                  | Adventure, Animation, Children, Fantasy |
+| 5        | Emperor's New Groove, The (2000)       | Adventure, Animation, Children, Comedy  |
+
 
 # Dataset
 The system uses the Kaggle MovieLens Dataset to train the recommendation model. It processes the movies.csv and ratings.csv files to build the recommendations.
