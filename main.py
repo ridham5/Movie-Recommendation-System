@@ -1,44 +1,64 @@
+"""Content-based movie recommender: finds movies with the most similar genres.
+
+Usage:
+    python main.py "Toy Story (1995)"
+    python main.py "Heat (1995)" -n 10 --movies movies_dataset/movie.csv
+"""
+
+import argparse
+
 import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-# Load the movies and ratings datasets
-movies = pd.read_csv("movies_dataset/movie.csv")
-ratings = pd.read_csv("movies_dataset/rating.csv")
+DEFAULT_MOVIES = "data/sample_movies.csv"
 
-# Merge the datasets
-data = pd.merge(ratings, movies, on="movieId")
 
-# Use a subset of the data for testing (first 10,000 movies)
-data_subset = data[:10000]
-genre_matrix = CountVectorizer(tokenizer=lambda x: x.split('|'), token_pattern=None).fit_transform(data_subset['genres'])
+def load_movies(path):
+    """Load a MovieLens-style CSV with movieId, title and genres columns (one row per movie)."""
+    movies = pd.read_csv(path, usecols=["movieId", "title", "genres"])
+    movies = movies.drop_duplicates(subset="title").reset_index(drop=True)
+    movies = movies[movies["genres"] != "(no genres listed)"].reset_index(drop=True)
+    return movies
 
-# Compute the similarity matrix
-similarity_matrix = cosine_similarity(genre_matrix)
 
-# Recommendation function
-def recommend_movies(movie_title, num_recommendations=5):
+def build_similarity(movies):
+    """Turn each movie's genres into a vector, then compare every pair with cosine similarity."""
+    vectorizer = CountVectorizer(tokenizer=lambda g: g.split("|"), token_pattern=None, lowercase=False)
+    genre_matrix = vectorizer.fit_transform(movies["genres"])
+    return cosine_similarity(genre_matrix)
+
+
+def recommend(movies, similarity, title, n=5):
+    """Return the n movies whose genres are most similar to `title`."""
+    matches = movies.index[movies["title"] == title]
+    if len(matches) == 0:
+        raise KeyError(f"Movie not found: {title}")
+    idx = matches[0]
+
+    scores = sorted(enumerate(similarity[idx]), key=lambda pair: pair[1], reverse=True)
+    top = [i for i, _ in scores if i != idx][:n]
+
+    result = movies.iloc[top][["title", "genres"]].copy()
+    result["similarity"] = [round(similarity[idx][i], 2) for i in top]
+    return result.reset_index(drop=True)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Recommend movies with similar genres.")
+    parser.add_argument("title", nargs="?", default="Toy Story (1995)")
+    parser.add_argument("-n", type=int, default=5, help="number of recommendations")
+    parser.add_argument("--movies", default=DEFAULT_MOVIES, help="path to movies CSV")
+    args = parser.parse_args()
+
+    movies = load_movies(args.movies)
+    similarity = build_similarity(movies)
     try:
-        # Get the index of the movie
-        movie_idx = data_subset[data_subset['title'] == movie_title].index[0]
-        similarity_scores = list(enumerate(similarity_matrix[movie_idx]))
-        sorted_movies = sorted(similarity_scores, key=lambda x: x[1], reverse=True)
+        print(f"\nMovies similar to '{args.title}':\n")
+        print(recommend(movies, similarity, args.title, args.n).to_string(index=False))
+    except KeyError as err:
+        print(err)
 
-        # Collect unique recommendations
-        recommended_indices = []
-        seen_titles = set()
-        for i, _ in sorted_movies:
-            title = data_subset.iloc[i]['title']
-            if title not in seen_titles and title != movie_title:
-                recommended_indices.append(i)
-                seen_titles.add(title)
-            if len(recommended_indices) >= num_recommendations:
-                break
 
-        return data_subset.iloc[recommended_indices][['title', 'genres']]
-    except IndexError:
-        return "Movie not found in dataset!"
-
-# Test the recommendation system
-print("\nRecommended Movies for 'Toy Story (1995)':")
-print(recommend_movies('Toy Story (1995)'))
+if __name__ == "__main__":
+    main()
